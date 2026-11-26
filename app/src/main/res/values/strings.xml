@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Vocab</string>
+    <string name="process_text_label">Add to Vocabulary</string>
+</resources>
