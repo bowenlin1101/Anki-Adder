@@ -1,6 +1,5 @@
 package com.vocab.anki
 
-import android.text.TextUtils
 import org.json.JSONArray
 import java.io.FileNotFoundException
 import java.net.HttpURLConnection
@@ -9,31 +8,18 @@ import java.net.URLEncoder
 
 data class Definition(val text: String, val example: String?)
 data class Meaning(val partOfSpeech: String, val definitions: List<Definition>)
+
+/** One meaning of a word: what goes on a card. */
+data class Sense(val partOfSpeech: String, val definition: String, val example: String?)
+
 data class Entry(val word: String, val phonetic: String?, val meanings: List<Meaning>) {
 
-    /** Short version read aloud: the first definition only. */
-    fun spokenSummary(): String {
-        val first = meanings.firstOrNull() ?: return word
-        val def = first.definitions.firstOrNull()?.text ?: ""
-        return "$word. ${first.partOfSpeech}: $def"
+    /** Every meaning in dictionary order (most common first within each part of speech). */
+    val senses: List<Sense> = meanings.flatMap { m ->
+        m.definitions.map { Sense(m.partOfSpeech, it.text, it.example) }
     }
 
-    /** HTML for the back of the Anki card (also used for the on-screen view). */
-    fun toHtml(): String = buildString {
-        for (m in meanings) {
-            append("<p><b><i>").append(esc(m.partOfSpeech)).append("</i></b></p><ol>")
-            for (d in m.definitions) {
-                append("<li>").append(esc(d.text))
-                if (!d.example.isNullOrBlank()) {
-                    append("<br><i>&ldquo;").append(esc(d.example)).append("&rdquo;</i>")
-                }
-                append("</li>")
-            }
-            append("</ol>")
-        }
-    }
-
-    private fun esc(s: String) = TextUtils.htmlEncode(s)
+    fun spokenSummary(sense: Sense): String = "$word. ${sense.partOfSpeech}: ${sense.definition}"
 }
 
 class WordNotFoundException(word: String) : Exception("Couldn't find a definition for \"$word\".")
@@ -41,7 +27,7 @@ class WordNotFoundException(word: String) : Exception("Couldn't find a definitio
 /** Looks words up in the free dictionaryapi.dev service (no account or API key needed). */
 object Dictionary {
     private const val MAX_PARTS_OF_SPEECH = 3
-    private const val MAX_DEFS_PER_PART = 3
+    private const val MAX_DEFS_PER_PART = 4
 
     fun lookup(word: String): Entry {
         val url = URL("https://api.dictionaryapi.dev/api/v2/entries/en/" +

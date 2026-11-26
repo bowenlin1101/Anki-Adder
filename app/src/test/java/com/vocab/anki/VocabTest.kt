@@ -34,9 +34,13 @@ class VocabTest {
         assertTrue("expected several parts of speech", entry.meanings.size >= 2)
         assertTrue(entry.meanings.isNotEmpty())
         assertTrue(entry.meanings.size <= 3)
-        assertTrue(entry.meanings.all { it.definitions.size in 1..3 })
+        assertTrue(entry.meanings.all { it.definitions.size in 1..4 })
         // Parts of speech are merged, not repeated.
         assertEquals(entry.meanings.size, entry.meanings.map { it.partOfSpeech }.toSet().size)
+        // Senses are flattened in order, keeping each definition's own example.
+        assertEquals(entry.meanings.sumOf { it.definitions.size }, entry.senses.size)
+        assertEquals(entry.meanings[0].definitions[0].text, entry.senses[0].definition)
+        assertEquals(entry.meanings[0].partOfSpeech, entry.senses[0].partOfSpeech)
         println(entry.meanings.joinToString("\n") { m -> m.partOfSpeech + ": " + m.definitions.joinToString(" | ") { it.text } })
     }
 

@@ -86,13 +86,20 @@
                 android:textSize="16sp" />
 
             <TextView
-                android:id="@+id/definition"
+                android:id="@+id/pickHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="Tap the meaning you want on the card:"
+                android:textColor="@color/muted"
+                android:textSize="14sp" />
+
+            <!-- One radio button per meaning; the first is selected by default. -->
+            <RadioGroup
+                android:id="@+id/senseGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:lineSpacingExtra="4dp"
-                android:textColor="@color/text"
-                android:textIsSelectable="true"
-                android:textSize="17sp" />
+                android:orientation="vertical" />
         </LinearLayout>
     </ScrollView>
 

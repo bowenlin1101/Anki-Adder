@@ -4,18 +4,26 @@ An Android app that looks up a word, reads the definition to you, asks
 **"Do you want to add it to your vocabulary list?"**, and if you say yes,
 adds a card to the **Vocabulary** deck in AnkiDroid.
 
-- **Front of the card:** the word
-- **Back of the card:** pronunciation, then up to 3 meanings (noun, verb, …) with up to 3 definitions and examples each
-- Cards are tagged `vocab-app`. If the word is already in the deck, it isn't added again.
-- If the Vocabulary deck doesn't exist, it's created.
+The app lists the word's meanings (most common first) with the first one
+selected. Tap a different one if it fits how you saw the word, then add it.
+Each card holds **one** meaning:
+
+- **Front:** the word
+- **Back:** part of speech, the definition, and an example sentence (when the dictionary has one)
+
+Cards use their own note type, **Vocab (Anki Adder)**, with plain-text fields
+*Word*, *Part of speech*, *Definition* and *Example*. The app creates it the
+first time. To change how cards look, edit that note type's card template in
+Anki. Cards are tagged `vocab-app`. A word already in the deck isn't added
+again, and the Vocabulary deck is created if it doesn't exist.
 
 ## Ways to use it
 
 | How | What happens |
 |---|---|
-| **"Hey Google, open Vocab"** | The app opens and listens. Say a word ("ubiquitous") or a question ("what does ubiquitous mean?"). It reads out the definition and asks if you want to add it. Answer **yes** or **no** out loud. |
+| **"Hey Google, open Vocab"** | The app opens and listens. Say a word ("ubiquitous") or a question ("what does ubiquitous mean?"). It reads out the first definition and asks if you want to add it. Answer **yes** or **no** out loud (or tap a different meaning first). |
 | Tap the **Vocab** icon | Same as above. |
-| **Highlight a word in any app** (Chrome, Kindle, messages…) | Tap **⋮ → Add to Vocabulary** in the pop-up menu. It shows the definition with **Add to Vocabulary** / **No thanks** buttons (no talking). |
+| **Highlight a word in any app** (Chrome, Kindle, messages…) | Tap **⋮ → Add to Vocabulary** in the pop-up menu. It shows the meanings with **Add to Vocabulary** / **No thanks** buttons (no talking). |
 | **Share** text to Vocab | Same as highlighting. |
 | Type in the search box | Same as highlighting. |
 
@@ -39,7 +47,8 @@ phrase is "Hey Google, **open Vocab**", then you say the word.
 ## Changing things
 
 - **Deck name:** `DECK_NAME` in `app/src/main/java/com/vocab/anki/MainActivity.kt`.
-- **How much goes on the card:** `MAX_PARTS_OF_SPEECH` / `MAX_DEFS_PER_PART` in `Dictionary.kt`.
+- **How many meanings are listed:** `MAX_PARTS_OF_SPEECH` / `MAX_DEFS_PER_PART` in `Dictionary.kt`.
+- **Card layout:** `FRONT`, `BACK` and `CSS` in `AnkiDroid.kt` (only used when the note type is first created; after that, edit it in Anki).
 - **Phrases it understands:** `SpokenQuery` in `Dictionary.kt`.
 
 ## How it works
@@ -50,7 +59,8 @@ phrase is "Hey Google, **open Vocab**", then you say the word.
   says it couldn't find them.
 - Speech uses Android's built-in voice typing and text-to-speech.
 - Cards are added through AnkiDroid's public content provider, the same
-  interface its official `AddContentApi` uses. It uses your **Basic** note type.
+  interface its official `AddContentApi` uses. If it can't create its own
+  note type, it falls back to your **Basic** note type with plain text.
 
 ## Building
 

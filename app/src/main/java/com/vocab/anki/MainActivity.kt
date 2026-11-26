@@ -9,7 +9,13 @@ import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.text.Html
+import android.graphics.Typeface
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
+import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -17,6 +23,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import java.util.Locale
 
@@ -44,7 +52,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var resultCard: LinearLayout
     private lateinit var wordTitle: TextView
     private lateinit var phonetic: TextView
-    private lateinit var definition: TextView
+    private lateinit var senseGroup: RadioGroup
+    private lateinit var pickHint: TextView
     private lateinit var status: TextView
     private lateinit var askRow: LinearLayout
 
@@ -67,7 +76,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         resultCard = findViewById(R.id.resultCard)
         wordTitle = findViewById(R.id.wordTitle)
         phonetic = findViewById(R.id.phonetic)
-        definition = findViewById(R.id.definition)
+        senseGroup = findViewById(R.id.senseGroup)
+        pickHint = findViewById(R.id.pickHint)
         status = findViewById(R.id.status)
         askRow = findViewById(R.id.askRow)
         findViewById<TextView>(R.id.deckLabel).text = "Adds words to your \"$DECK_NAME\" deck in AnkiDroid"
@@ -228,13 +238,51 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         wordTitle.text = entry.word
         phonetic.text = entry.phonetic ?: ""
         phonetic.visibility = if (entry.phonetic.isNullOrBlank()) View.GONE else View.VISIBLE
-        definition.text = Html.fromHtml(entry.toHtml(), Html.FROM_HTML_MODE_COMPACT)
+        showSenses(entry.senses)
         resultCard.visibility = View.VISIBLE
         askRow.visibility = View.VISIBLE
         status.text = "Add it to your vocabulary list?"
         if (voiceMode) {
-            speak("${entry.spokenSummary()}. Do you want to add it to your vocabulary list?", UTT_ASK)
+            speak("${entry.spokenSummary(entry.senses.first())}. Do you want to add it to your vocabulary list?", UTT_ASK)
         }
+    }
+
+    /** Fills the list of meanings: part of speech, definition, and example (if the dictionary has one). */
+    private fun showSenses(senses: List<Sense>) {
+        senseGroup.removeAllViews()
+        pickHint.visibility = if (senses.size > 1) View.VISIBLE else View.GONE
+        val muted = getColor(R.color.muted)
+        val pad = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics).toInt()
+        senses.forEachIndexed { i, sense ->
+            val text = SpannableStringBuilder()
+            text.append(sense.partOfSpeech, StyleSpan(Typeface.ITALIC), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text.setSpan(ForegroundColorSpan(muted), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            text.append("\n").append(sense.definition)
+            sense.example?.let {
+                val start = text.length
+                text.append("\n“").append(it).append("”")
+                text.setSpan(StyleSpan(Typeface.ITALIC), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text.setSpan(ForegroundColorSpan(muted), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text.setSpan(RelativeSizeSpan(0.92f), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            val rb = RadioButton(this).apply {
+                id = View.generateViewId()
+                tag = i
+                this.text = text
+                textSize = 17f
+                setTextColor(getColor(R.color.text))
+                setPadding(pad, pad, 0, pad)
+                setLineSpacing(0f, 1.15f)
+            }
+            senseGroup.addView(rb, RadioGroup.LayoutParams(
+                RadioGroup.LayoutParams.MATCH_PARENT, RadioGroup.LayoutParams.WRAP_CONTENT))
+            if (i == 0) rb.isChecked = true
+        }
+    }
+
+    private fun selectedSense(entry: Entry): Sense {
+        val checked = senseGroup.findViewById<RadioButton>(senseGroup.checkedRadioButtonId)
+        return entry.senses.getOrNull(checked?.tag as? Int ?: 0) ?: entry.senses.first()
     }
 
     // ---- Anki -----------------------------------------------------------------
@@ -258,12 +306,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         status.text = "Adding…"
         askRow.visibility = View.GONE
+        val sense = selectedSense(entry)
         Thread {
-            val back = buildString {
-                if (!entry.phonetic.isNullOrBlank()) append("<div><i>").append(Html.escapeHtml(entry.phonetic)).append("</i></div>")
-                append(entry.toHtml())
-            }
-            val result = anki.addWord(DECK_NAME, entry.word, back)
+            val result = anki.addWord(DECK_NAME, entry.word, sense)
             runOnUiThread {
                 val msg = when (result) {
                     AnkiDroid.Result.Added -> "Added \"${entry.word}\" to $DECK_NAME."
